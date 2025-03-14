@@ -32,4 +32,4 @@
 
 > ![대체 텍스트](이미지 경로)
 
-![깃허브 로고](./images/download.jpg)
+![깃허브 로고](shylitboi/SQL/Assignment_25_1/images/download.jpg)
