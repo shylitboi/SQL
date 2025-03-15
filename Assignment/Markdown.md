@@ -28,8 +28,19 @@
 
 [GOOGLE](https://www.google.com/webhp?hl=ko&sa=X&ved=0ahUKEwiHlum374iMAxVQafUHHcvFD6AQPAgI)
 
+일반적인 URL 혹은 이메일주소인 경우 적절한 형식으로 링크를 형성한다.
+
+* 외부링크: <http://example.com/>
+* 이메일링크: <address@example.com>
+
 ### 이미지
 
 > ![대체 텍스트](이미지 경로)
 
 ![깃허브 로고](shylitboi/SQL/Assignment_25_1/images/download.jpg)
+
+### 코드블럭
+영문으로 전환한 다음 물결표 누르면 ` 나옴
+```python
+print('code block')
+```
