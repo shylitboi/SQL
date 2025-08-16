@@ -215,16 +215,6 @@ FROM STUDENTS;
         -- '김치'를 포함하는 리뷰 텍스트 찾기
         WHERE REVIEW_TEXT LIKE '%김치%'
         ```
-        ```sql
-        -- '서울'로 시작하는 주소 찾기
-        WHERE ADDRESS LIKE '서울%'
-
-        -- '동'으로 끝나는 식당 이름 찾기
-        WHERE REST_NAME LIKE '%동'
-
-        -- '김치'를 포함하는 리뷰 텍스트 찾기
-        WHERE REVIEW_TEXT LIKE '%김치%'
-        ```
         ### NOT LIKE
         ```SQL
         -- '서울'로 시작하지 않는 주소
