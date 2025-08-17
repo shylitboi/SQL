@@ -324,3 +324,233 @@ FROM STUDENTS;
 * MAX(컬럼) : 최대값
 
 ### 3) having
+* group by 수행 후 특정 그룹 골라낼 때 사용
+* 그룹핑  후에 가능한 집계함수로 조건 부여 가능
+* 쿼리 순서
+    1) from
+    2) where
+    3) group by
+    4) having
+    5) select
+    6) order by
+* where절을 사용해도 조건까지 Having절에서 쓰면 성능상 불래. 미리 where절에서 필터링 하는 것이 더 낫다
+* 또한 논리적으로 having절은 select절보다 먼저 수행되기 때문에 SELECT에서 정의한 ALIAS 사용할 수 없다
+
+>## ORDER BY
+* SELECT한 데이터 정렬
+    * 정렬의 기준이 되는 컬럼은 여러개 가능
+
+* 옵션 : ASC, DESC(옵션 생략시 오름차순이 기본)
+
+* 정렬의 기준이 되는 컬럼에 null이 포함되어 있을 경우 RDBMS에 따라 정렬 위치가 다름
+    1) oracle : null이 최대값 취급하기에 오룸차순시 맨 마지막
+
+    2) 순서를 변경하고 싶다면 order by절에 ```nulls first, nulls last```옵션을 써서 순서 변경 가능
+
+* SELECT에서 별칭을 붙였어도, ORDER BY에서는 원래 칼럼명 써도 되고 별칭 써도 됌
+
+>## JOIN
+
+### 1) **개념 : 여러개의 테이블을 한번에 보여줄 때 쓰이는 쿼리, 매우 중요!!!**
+
+### 2) EQUI JOIN : '=' 연산자를 이용한 조인, INNER JOIN 기본 형태
+    * 기본 문법
+    ```sql
+    SELECT 컬럼들
+    FROM 테이블A A, 테이블B B
+    WHERE A.공통칼럼 = B.공통칼럼;
+    ```
+    또는 ANSI 표준 JOIN 문법으로:
+    ```sql
+    SELECT 컬럼들
+    FROM 테이블A A
+    JOIN 테이블B B
+    ON A.공통칼럼 = B.공통칼럼;
+    ```
+### 3) NON EQUI JOIN 
+ * 등호(=)가 아닌 연산자(<, >, <=, >=, BETWEEN, LIKE …)를 사용해서 두 테이블을 조인하는 방식입니다.
+
+* 보통 범위 매핑이나 구간 조건이 필요할 때 사용합니다.
+
+* 따라서 PK–FK 같은 정확한 키 매칭이 아니라, “조건에 맞는 구간”을 기준으로 조인을 합니다.
+
+    * 기본 문법
+     ```sql
+    SELECT e.emp_name, e.salary, g.grade
+    FROM Employee e, Sal_Grade g
+    WHERE e.salary BETWEEN g.min_salary AND g.max_salary;
+    ```
+    ANSI 표준 문법
+    ```sql
+    SELECT e.emp_name, e.salary, g.grade
+    FROM Employee e
+    JOIN Sal_Grade g
+    ON e.salary BETWEEN g.min_salary AND g.max_salary;
+    ```
+
+### 4) 3개 이상 table JOIN
+```SQL
+SELECT A.PRODUCT_NAME, B.MEMBER_ID, B.CONTENT, C.EVENT_NAME
+FROM PRODUCT A,
+    PRODUCT_REVIEW B,
+    EVENT C
+WHERE A.PRODUCT_CODE = B.PRODUCT_CODE 
+    AND B.REG_DATE BETWEEN C.START_DATE AND C.END_DATE;
+```
+* join되는 테이블에 모두 존재하는 커럼의 경우 반드시 테이블명 혹은 alias 붙여줘야 한다
+
+
+### 5) OUTER JOIN
+* 개념 :조인 조건에 맞는 행은 물론이고, 조건에 맞지 않는 행까지도 결과에 포함시키는 조인 방식. 즉, 한쪽 테이블에만 존재하는 데이터도 표시할 수 있습니다.
+
+1) LEFT OUTER JOIN : 왼쪽 테이블(A)의 모든 행을 결과에 포함.
+
+    * 오른쪽 테이블(B)에 매칭되는 값이 없으면 NULL로 채움.
+
+2) RIGHT OUTER JOIN : 오른쪽 테이블(B)의 모든 행을 결과에 포함.
+
+    * 왼쪽 테이블(A)에 매칭되는 값이 없으면 NULL로 채움.
+
+* **Oracle에서 사용** : 모든 행이 출력되는(left, right) 테이블이 아닌 테이블의 옆에 (+) 기호 붙이기
+    ```sql
+    select ~~~
+    from product a,
+        product_Review b
+    where a.product_code = b.product_code(+)
+    ```
+    * product(왼쪽 테이블) 은 무조건 다 나오고, 리뷰가 없는 상품은 b.* 컬럼이 NULL로 채워져서 출력됩니다. 
+
+### STANDARD JOIN
+**: ANSI SQL중 하나로 RDBMS에 상관 없이 돌아가는 조인 쿼리!!!**
+
+***1) INNER JOIN : ON절을 사용해 작성***
+    ```SQL
+    SELECT A.PRODUCT_CODE,
+        A.PRODUCT_NAME,
+        B.MEMBER_ID,
+        B.CONTENT,
+        B.REG_DATE
+    FROM PRODUCT A INNER JOIN PRODUCT_REVIEW B
+        ON A.PRODUCT_CODE = B.PRODUCT_CODE
+    ```
+
+***2. OUTER JOIN***
+
+    1) LEFT OUTER JOIN : 왼쪽 테이블(A)의 모든 행을 결과에 포함.
+
+        * 오른쪽 테이블(B)에 매칭되는 값이 없으면 NULL로 채움.
+        ```SQL
+        SELECT e.emp_name, d.dept_name
+        FROM Employee e
+        LEFT OUTER JOIN Department d
+        ON e.dept_id = d.dept_id;
+        ```
+        ```모든 직원은 출력, 부서가 없는 직원은 dept_name = NULL```
+
+    2) RIGHT OUTER JOIN : 오른쪽 테이블(B)의 모든 행을 결과에 포함.
+
+        * 왼쪽 테이블(A)에 매칭되는 값이 없으면 NULL로 채움.
+
+        ```SQL
+        SELECT e.emp_name, d.dept_name
+        FROM Employee e
+        RIGHT OUTER JOIN Department d
+        ON e.dept_id = d.dept_id;
+        ```
+         ```모든 부서는 출력, 직원이 없는 부서는 emp_name = NULL```
+    3) FULL OUTER JOIN : 양쪽 테이블의 모든 행을 결과에 포함.
+        * 합집합이므로 한쪽에 매칭 값이 없으면 NULL.
+        ```sql
+        SELECT e.emp_name, d.dept_name
+        FROM Employee e
+        FULL OUTER JOIN Department d
+        ON e.dept_id = d.dept_id;
+        ```
+
+    ***4) 주의사항 : ON절에서 조건과 WHERE 절에서 조건 차이
+    다음과 같이 정리할 수 있
+
+        ```sql
+        SELECT *
+        FROM SAMPLE1 A RIGHT OUTER JOIN SAMPLE2 B
+            ON (A.COL1 = B.COL1 AND B.COL2 IS NOT NULL);
+        ```
+
+        •	RIGHT OUTER JOIN에서 기준이 되는 테이블은 SAMPLE2 (B)
+
+        •	따라서 SAMPLE2의 모든 행이 결과에 포함된다.
+
+        •	ON 절 조건(A.COL1 = B.COL1 AND B.COL2 IS NOT NULL)은 조인 매칭 여부만 결정한다.
+
+        •	B.COL2가 NULL이면 조인 매칭은 실패하지만, 보존 테이블이므로 해당 행은 결과에 남고 A쪽 값이 NULL로 채워진다.
+        
+    테이블: 
+    SAMPLE 1
+    | COL1 | COL2 |
+    |------|------|
+    | 2    | G    |
+    | 3    | H    |
+    | 3    | I    |
+
+    SAMPLE 2
+    | COL1 | COL2 |
+    |------|------|
+    | 1    | A    |
+    | 2    | B    |
+    | 3    | NULL |
+    | 4    | D    |
+    | 5    | E    |
+
+    * JOIN 결과
+
+    | A.COL1 | A.COL2 | B.COL1 | B.COL2 |
+    |--------|--------|--------|--------|
+    | NULL   | NULL   | 1      | A      |
+    | 2      | G      | 2      | B      |
+    | NULL   | NULL   | 3      | NULL   |
+    | NULL   | NULL   | 4      | D      |
+    | NULL   | NULL   | 5      | E      |
+
+
+    * ON에 조건이 있을 경우 → (3, NULL) 포함 (좌측이 NULL)
+    * WHERE에 B.COL2 IS NOT NULL 조건이 있을 경우 → (3, NULL) 제거됨
+
+***3) NATURAL JOIN***
+
+* 개념 : NATURAL JOIN은 두 테이블에서 같은 이름을 가진 컬럼들을 자동으로 찾아, 그 컬럼들을 기준으로 조인하는 방식입니다.  
+    * 같은 이름을 가진 컬럼들이 모두 동일한 데이터를 가지고 있어야함
+    *  명시적으로 조인 조건을 작성할 필요 없음
+    
+    * 내부적으로 USING (공통컬럼)과 같은 방식으로 동작
+
+* 특징
+
+    * NATURAL JOIN은 공통된 컬럼명이 있는 모든 컬럼을 자동으로 조인 조건으로 사용
+
+    * 결과 테이블에서는 공통 컬럼은 한 번만 출력됨
+
+    * INNER, LEFT, RIGHT, FULL 조인과 함께 사용할 수 있음 
+    * ON 절을 사용 할 수 없다
+
+- 만약 중간에 데이터를 수정해서 한쪽 테이블의 데이터가 바뀐다면 join 되지 않는다
+
+- ```USING```조건절을 이용하여 같은 이름을 가진 컬럼 중 원하는 컬럼만 join에 이용 가능하다
+
+***4) CROSS JOIN***
+
+* A테이블과 b테이블 사이에 **join조건이 없는**경우 조합할 수 있는 모든 경우의 수를 출력하는 방식
+    * Cartesian Product라고 표현
+    * 결과 행 수 = 테이블1 행 수 × 테이블2 행 수
+    ```sql
+    SELECT *
+    FROM A
+    CROSS JOIN B;
+    ```
+    =
+    ```sql
+
+    SELECT *
+    FROM A, B;  -- 별도의 JOIN 조건 없이 쓰면 CROSS JOIN과 동일
+    ```
+
+* JOIN에서 USING절을 사용한 경우, USING절에서 사용한 칼럼은 SELECT절에서 별도의 테이블명이나 alias 표기 할 수 없다
