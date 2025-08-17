@@ -306,3 +306,21 @@ FROM STUDENTS;
     5) not
     6) and
     7) or
+
+
+>## GROUP BY, HAVING
+
+### 1) GROUP BY 
+* group by + (그룹핑의 기준이 되는) 칼럼명
+
+### 2) 집계 함수
+
+* COUNT(*) :  전체 행 개수 반환
+* COUNT(칼럼) : 컬럼값이 null인 행을 제외하고 count
+* COUNT(DISTINCT 컬럼) : 컬럼값이 null인 행을 제외하고 중복을 제거한 count 
+* SUM(컬럼) : 컬럼값이 null인 행을 제외하고 컬럼값 합계 반환
+* AVG(컬럼) : 컬럼값이 null인 행을 제외하고 평균값 반환
+* MIN(컬럼) : 최소값
+* MAX(컬럼) : 최대값
+
+### 3) having
