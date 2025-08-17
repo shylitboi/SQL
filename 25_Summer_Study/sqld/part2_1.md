@@ -554,3 +554,131 @@ WHERE A.PRODUCT_CODE = B.PRODUCT_CODE
     ```
 
 * JOIN에서 USING절을 사용한 경우, USING절에서 사용한 칼럼은 SELECT절에서 별도의 테이블명이나 alias 표기 할 수 없다
+
+>## 적중 예상 문제
+
+### 4번
+**📌 DECODE 함수란?**
+
+조건에 따라 값을 변환해주는 Oracle 내장 함수
+
+형식은 일종의 switch-case처럼 동작
+
+기본 문법:
+
+DECODE(expr, search1, result1
+            [, search2, result2, ...]
+            [, default_result])
+
+✅ 동작 방식
+
+expr 값을 search1, search2, … 와 차례대로 비교
+
+같으면 해당하는 result를 반환
+
+매칭되는 게 없으면 마지막 default_result 반환
+(없으면 NULL 반환)
+
+```sql
+DECODE(EMP_STATE, 1, '재직', 2, '휴직', 3,'퇴직', ' ') --  마지막 default값이 공백
+```
+
+### 5번
+
+* mod(수1, 수2) : 수2가 0이면 수1 반환
+* 수1/수2 : 수2가 0이면 에러 발생
+
+### 7번
+* NATURAL JOIN은 같은 이름을 가진 컬럼이 모두 동일한 데이터를 가진 경우 join됨
+* **공통 컬럼 앞에 테이블명이나 alias를 붙이면 안된다**
+
+### 9번
+* NULL을 가장 큰 값으로 간주해 정렬할 것인지 아닌지는 DBMS마다 다름
+
+### 14번
+
+ISNULL(expression, replacement) != IS NULL(TRUE, FALSE 반환)
+```   
+동작
+expression이 NULL이면 → replacement 반환
+
+expression이 NULL이 아니면 → expression 그대로 반환
+
+즉, NULL을 대체할 값을 지정하는 함수입니다.
+```
+
+### 17번
+LIKE문에서 ESCAPE 문자 지정  
+```
+컬럼명 LIKE '패턴' ESCAPE '특수문자'
+```
+*  % : 0개 이상의 임의 문자열
+* _ : 임의의 한 글자
+
+* ESCAPE 'x' : x를 이스케이프 문자로 지정 (뒤에 오는 %, _는 특수 의미 무시하고 문자 그대로 인식)
+
+```sql
+-- % 문자 자체 검색
+
+-- 값에 '50%' 가 들어있는 행 검색
+SELECT *
+FROM product
+WHERE description LIKE '%50!%%' ESCAPE '!';
+```
+
+### 20번
+**VARCHAR() vs CHAR()**
+* CHAR(n)은 길이 n이 고정됨 -> n보다 문자열 길이가 짧을 경우 나머지 자리는 공백으로 채워 고정 길이를 유지
+
+* VARCHAR(n)은 최대 n, 가변적 길이
+### 25번
+ORDER BY절에서는 컬럼명을 명시 할 수도 있고 SELECT절에 기술된 컬럼의 **순서**를 숫자로 명시해줘도 됨
+
+### 28번
+HAVING절은 주로 group by뒤에 오지만 테이블 전체가 한개의 그룹인 경우 HAVING만 단독으로 사용 가능, WHERE과 동일해짐
+
+### 30번
+```sql
+SELECT A.COL1, B.COL1, C.COL1
+FROM SAMPLE1 A, SAMPLE2 B, SAMPLE3 C
+WHERE A.COL1 = B.COL1(+)
+  AND A.COL1 = C.COL1(+);
+```
+* B.COL1(+) → SAMPLE2 테이블을 왼쪽 외부 조인
+
+* C.COL1(+) → SAMPLE3 테이블을 왼쪽 외부 조인
+* 즉, SAMPLE1 기준으로 무조건 출력, SAMPLE2 / SAMPLE3 값이 없으면 NULL로 채워집니다.
+
+* 조인 결과 도출 과정
+```
+A.COL1 = B.COL1(+)
+
+A=1 → B=1 매칭됨
+
+A=2 → B 없음 → NULL
+
+A=3 → B=3 매칭됨
+
+A=4 → B 없음 → NULL
+```
+```
+A.COL1 = C.COL1(+)
+
+A=1 → C 없음 → NULL
+
+A=2 → C=2 매칭됨
+
+A=3 → C 없음 → NULL
+
+A=4 → C=4 매칭됨
+```
+
+* 최종 결과
+
+| A.COL1 | B.COL1 | C.COL1 |
+|--------|--------|--------|
+|   1    |   1    | NULL   |
+|   2    | NULL   |   2    |
+|   3    |   3    | NULL   |
+|   4    | NULL   |   4    |
+
