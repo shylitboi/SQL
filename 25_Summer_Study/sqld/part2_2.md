@@ -1,5 +1,5 @@
 # PART 2 -2 SQL 활용
->## 서브쿼리
+>## 1. 서브쿼리
 
 * 개념 : 하나의 쿼리 안에 또 다른 쿼리. 바깥 쿼리는 메인쿼리.
     * 메인쿼리의 컬럼이 포함된 서브쿼리는 연관 서브쿼리, 포함되지 않은 서브쿼리는 비연관 서브쿼리라고 함
@@ -89,7 +89,7 @@ HAVING AVG(salary) > (SELECT AVG(salary) FROM emp);
 ### 중첩 서브 쿼리
 
 A) WHERE, HAVING절에 사용 가능. 중첩 서브쿼리는 메인 쿼리와 관계에 따라 아래와 같이 구분
-1) 연관 서브쿼리 : 메인쿼리의 컬럼 포함됨, 단독 실행 가능
+1) 연관 서브쿼리 : 메인쿼리의 컬럼 포함됨, 단독 실행 불가
     ```sql
     SELECT emp_name, salary
     FROM emp e
@@ -98,7 +98,7 @@ A) WHERE, HAVING절에 사용 가능. 중첩 서브쿼리는 메인 쿼리와 �
         FROM emp
         WHERE dept_id = e.dept_id);
     ```
-2) 비연관 서브쿼리  : 메인쿼리의 컬럼이 없음, 단독 실행 불가능
+2) 비연관 서브쿼리  : 메인쿼리의 컬럼이 없음, 단독 실행 가능
     ```sql
     SELECT emp_name, salary
     FROM emp
@@ -230,7 +230,7 @@ WHERE EXISTS (SELECT 1
 
 ---
 
->## 뷰 
+>## 2. 뷰 
 
 1) 뷰란?
 * SELECT 문을 저장해둔 가상 테이블
@@ -269,7 +269,7 @@ WHERE dept_name = 'SALES';
 
 (3) 삭제
 ```DROP VIEW emp_dept_vw;```
->## 집합 연산자
+>## 3. 집합 연산자
 * 각 쿼리의 결과 집합을 가지고 연산을 하는 명령어
 
 1) UNION ALL : 합집합 + 중복행 출력
@@ -304,7 +304,7 @@ EXCEPT -- MINUS
 select * from infinite_Challenge
 ```
 
->## 그룹함수
+>## 4. 그룹함수
 : 데이터를 GROUP BY하여 나타낼 수 있는 데이터를 구하는 함수
 * 여러 행(Row)을 묶어서 하나의 결과(값)로 나타내는 함수
 
@@ -451,3 +451,639 @@ GROUP BY CUBE(A, B, C);
 * CUBE(A,B,C) → 가능한 모든 조합: 총 8개 조합 (2³)
 
 >ROLLUP은 “위계적 요약”, CUBE는 “조합 전체 요약”
+
+### GROUPING SETS
+: 특정 항목에 대한 소계를 계산하는 함수이다. 인자 값으로 ROLLUP, CUBE를 사용할 수도 있다.
+* ROLLUP, CUBE 는 자동으로 여러 집계를 만들어주지만,
+
+* GROUPING SETS 는 내가 원하는 조합만 직접 지정해서 집계하는 기능이에요.
+
+* 즉, 여러 GROUP BY 절을 UNION 하는 것과 같은 효과를 냅니다.
+
+| A(지역) | B(지점) | C(직원) | amount |
+| ----- | ----- | ----- | ------ |
+| 서울    | 강남    | 홍길동   | 100    |
+| 서울    | 강남    | 김철수   | 200    |
+| 서울    | 종로    | 이영희   | 150    |
+| 부산    | 해운대   | 박민수   | 300    |
+
+
+1) GROUPING SETS(A,B) : A로 그룹핑, B로 그룹핑
+
+| A    | B    | SUM(amount) |
+| ---- | ---- | ----------- |
+| 서울   | NULL | 450         |
+| 부산   | NULL | 300         |
+| NULL | 강남   | 300         |
+| NULL | 종로   | 150         |
+| NULL | 해운대  | 300         |
+
+2) GROUPING SETS(A,B,()) : A로 그룹핑, B로 그룹핑, 총합계
+
+| A    | B    | SUM(amount) |
+| ---- | ---- | ----------- |
+| 서울   | NULL | 450         |
+| 부산   | NULL | 300         |
+| NULL | 강남   | 300         |
+| NULL | 종로   | 150         |
+| NULL | 해운대  | 300         |
+| NULL | NULL | 750         |
+
+3) GROUPING SETS(A, ROLLUP(B)) : A로 그룹핑, B로 그룹핑, 총합계
+
+| A    | B    | SUM(amount) |
+| ---- | ---- | ----------- |
+| 서울   | NULL | 450         |
+| 부산   | NULL | 300         |
+| NULL | 강남   | 300         |
+| NULL | 종로   | 150         |
+| NULL | 해운대  | 300         |
+| NULL | NULL | 750         |
+* 결과는 GROUPING SETS(A,B,()) 와 동일
+4) GROUPING SETS(A, ROLLUP(B,C)) : A로 그룹핑, B,C로 그룹핑, B로 그룹핑, 총합계
+
+| A    | B    | C    | SUM(amount) |
+| ---- | ---- | ---- | ----------- |
+| 서울   | NULL | NULL | 450         |
+| 부산   | NULL | NULL | 300         |
+| NULL | 강남   | 홍길동  | 100         |
+| NULL | 강남   | 김철수  | 200         |
+| NULL | 강남   | NULL | 300         |
+| NULL | 종로   | 이영희  | 150         |
+| NULL | 종로   | NULL | 150         |
+| NULL | 해운대  | 박민수  | 300         |
+| NULL | 해운대  | NULL | 300         |
+| NULL | NULL | NULL | 750         |
+
+5) GROUPING SETS(A,B,ROLLUP(C)) : A로 그룹핑, B로 그룹핑, C로 그룹핑, 총합계
+
+| A    | B    | C    | SUM(amount) |
+| ---- | ---- | ---- | ----------- |
+| 서울   | NULL | NULL | 450         |
+| 부산   | NULL | NULL | 300         |
+| NULL | 강남   | NULL | 300         |
+| NULL | 종로   | NULL | 150         |
+| NULL | 해운대  | NULL | 300         |
+| NULL | NULL | 홍길동  | 100         |
+| NULL | NULL | 김철수  | 200         |
+| NULL | NULL | 이영희  | 150         |
+| NULL | NULL | 박민수  | 300         |
+| NULL | NULL | NULL | 750         |
+
+* ROLLUP 함수는 인수의 순서에 따라 결과가 달라지며, CUBE, GROUPING SETS는 인수의 순서가 바귀어도 같은 결과 출력
+    1) CUBE(A,B) → (A,B), (A), (B), ()
+
+    CUBE(B,A) → (B,A), (B), (A), ()
+    👉 결과 조합은 동일 (A,B) ≡ (B,A)
+
+    즉, CUBE 는 모든 가능한 조합을 전부 생성하기 때문에 순서가 중요하지 않음
+
+
+    2) GROUPING SETS(A,B) → (A), (B)
+
+    GROUPING SETS(B,A) → (B), (A)
+    👉 같은 집합 결과 (집합은 순서가 없으므로 동일)
+
+
+#### GROUPING
+: ROLLUP, CUBE, GROUPING SETS등과 함께 쓰이며 결과 집합에 나오는 NULL 값이 진짜 데이터 NULL인지, 아니면 집계(소계/총계)를 의미하는 NULL인지 구분하기 위해 쓰는 함수
+* ROW를 구분할 수 있게 해줌
+
+```GROUPING(컬럼명)```
+
+* 해당 컬럼이 집계 레벨에서 생긴 NULL 이면 1 반환, 실제 데이터의 NULL 이면 0 반환
+
+eg)
+| 지역(A) | 지점(B) | amount |
+| ----- | ----- | ------ |
+| 서울    | 강남    | 100    |
+| 서울    | 종로    | 200    |
+| 부산    | 해운대   | 300    |
+
+```sql
+SELECT A, B, SUM(amount),
+       GROUPING(A) AS gA,
+       GROUPING(B) AS gB
+FROM sales
+GROUP BY ROLLUP(A,B);
+```
+| A    | B    | SUM(amount) | gA | gB                  |
+| ---- | ---- | ----------- | -- | ------------------- |
+| 서울   | 강남   | 100         | 0  | 0                   |
+| 서울   | 종로   | 200         | 0  | 0                   |
+| 서울   | NULL | 300         | 0  | 1  ← B는 집계 NULL     |
+| 부산   | 해운대  | 300         | 0  | 0                   |
+| 부산   | NULL | 300         | 0  | 1  ← B는 집계 NULL     |
+| NULL | NULL | 600         | 1  | 1  ← A,B 모두 집계 NULL |
+
+
+1) CASE + GROUPING
+```SQL
+SELECT 
+  CASE 
+    WHEN GROUPING(dept_id) = 1 AND GROUPING(job_id) = 1 
+      THEN '총합계'
+    WHEN GROUPING(job_id) = 1 
+      THEN dept_id || ' 부서 소계'
+    ELSE dept_id || '-' || job_id
+  END AS 구분,
+  SUM(salary) AS 합계
+FROM emp
+GROUP BY ROLLUP(dept_id, job_id);
+```
+| 구분         | 합계    |
+| ---------- | ----- |
+| 10-CLERK   | 5000  |
+| 10-MANAGER | 7000  |
+| 10 부서 소계   | 12000 |
+| 20-CLERK   | 4000  |
+| 20 부서 소계   | 4000  |
+| 총합계        | 16000 |
+
+
+2) DECOD + GROUPING(ORACLE)
+```sql
+SELECT 
+  DECODE(GROUPING(dept_id), 1, '총합계', dept_id) AS 부서,
+  DECODE(GROUPING(job_id), 1, '소계', job_id)     AS 직무,
+  SUM(salary) AS 합계
+FROM emp
+GROUP BY ROLLUP(dept_id, job_id);
+```
+| 부서  | 직무      | 합계    |
+| --- | ------- | ----- |
+| 10  | CLERK   | 5000  |
+| 10  | MANAGER | 7000  |
+| 10  | 소계      | 12000 |
+| 20  | CLERK   | 4000  |
+| 20  | 소계      | 4000  |
+| 총합계 | 소계      | 16000 |
+
+>## 5. 윈도우 함수
+: 행은 그대로 두고 “부서별 합계/순위/누적값” 같은 요약을 옆 칼럼으로 붙이는 것, "OVER" 키워드와 함께 사용되며 
+1) 순위함수
+2) 집계 함수
+3) 행 순서 함수
+4) 비율 함수 
+로 나눌 수 있다
+
+* 기본 형태
+```
+<함수명>(컬럼) OVER (
+    PARTITION BY 컬럼    -- 그룹 기준 (옵션) => 그룹 내 순위/집계 함
+    ORDER BY 컬럼        -- 정렬 기준 (옵션)
+    ROWS/RANGE BETWEEN ... -- 윈도우 프레임 (옵션)
+)
+```
+
+### 1. 순위 함수 
+: RANK() / DENSE_RANK() / ROW_NUMBER() 같은 순위 함수는 “순위를 매길 대상 컬럼”을 OVER 절의 ORDER BY 에서 지정합니다.
+* 즉, RANK() 자체는 그냥 순위 계산기일 뿐, 무엇을 기준으로 순위를 매길지는 OVER 절이 결정합니다.
+
+1) RANK : 순위를 매기며 같은 순위 존재시 존재 수만큼 다음 순위 건너뜀
+```sql
+SELECT emp_name, salary,
+       RANK() OVER (ORDER BY salary DESC) AS 급여순위
+FROM emp;
+```
+
+2) DENSE RANK : 같은 순위가 존재하더라도 다음 순위 건너 뛰지 않고 매김
+
+| dept\_id | emp\_name | salary |
+| -------- | --------- | ------ |
+| 10       | A         | 5000   |
+| 10       | B         | 4000   |
+| 10       | C         | 4000   |
+| 10       | D         | 3000   |
+| 20       | E         | 6000   |
+| 20       | F         | 5000   |
+| 20       | G         | 5000   |
+| 20       | H         | 4000   |
+
+```sql
+SELECT dept_id, emp_name, salary,
+       DENSE_RANK() OVER ( -- 동점자는 같은 순위, 다음 순위는 건너뛰지 않고 연속
+         PARTITION BY dept_id -- PARTITION BY dept_id → 부서별로 나눠서 순위 계산
+         ORDER BY salary DESC --ORDER BY salary DESC → 급여 높은 순으로 정렬 
+       ) AS 급여순위
+FROM emp;
+```
+| dept\_id | emp\_name | salary | 급여순위 |
+| -------- | --------- | ------ | ---- |
+| 10       | A         | 5000   | 1    |
+| 10       | B         | 4000   | 2    |
+| 10       | C         | 4000   | 2    |
+| 10       | D         | 3000   | 3    |
+| 20       | E         | 6000   | 1    |
+| 20       | F         | 5000   | 2    |
+| 20       | G         | 5000   | 2    |
+| 20       | H         | 4000   | 3    |
+
+
+3) ROW_NUMBER : 순위를 매기면서 동일 값이라도 각기 다른 순위 부여, 말 그대로 행번호
+* 날씨를 내림차순 하면 최신 날짜부터 오래된 날짜로 감
+    * 최신 날짜 = 더 큼!!!(숫자가 단순히 더 크잖아 ㅋ)
+
+### 2. 집계 함수
+개념 : SUM(), AVG(), COUNT(), MAX(), MIN() 같은 집계 함수는 원래 GROUP BY랑 같이 쓰이죠. 그런데 윈도우 함수(OVER 절) 안에 넣으면,
+
+* 그룹으로 묶지 않고도 "행 단위"로 집계 결과를 같이 볼 수 있습니다.
+* ```집계함수(칼럼명) OVER () AS ~```
+1) SUM
+
+EG)
+
+| dept\_id | emp\_name | sales |
+| -------- | --------- | ----- |
+| 10       | A         | 100   |
+| 10       | B         | 200   |
+| 10       | C         | 300   |
+| 20       | D         | 400   |
+| 20       | E         | 500   |
+| 20       | F         | 600   |
+
+WINDOW 집계함수 사용시
+```SQL
+SELECT dept_id, emp_name, sales,
+       SUM(sales) OVER (PARTITION BY dept_id) AS 부서매출합계,
+       AVG(sales) OVER (PARTITION BY dept_id) AS 부서평균매출
+FROM sales;
+```
+
+| dept\_id | emp\_name | sales | 부서매출합계 | 부서평균매출 |
+| -------- | --------- | ----- | ------ | ------ |
+| 10       | A         | 100   | 600    | 200    |
+| 10       | B         | 200   | 600    | 200    |
+| 10       | C         | 300   | 600    | 200    |
+| 20       | D         | 400   | 1500   | 500    |
+| 20       | E         | 500   | 1500   | 500    |
+| 20       | F         | 600   | 1500   | 500    |
+
+* 행 수는 유지, 부서별 매출합계, 평균 나옴
+
+* OVER절 내에 ORDER BY를 써서 누적값을 구할 수 있음
+```sql
+SUM(sales) OVER (
+    PARTITION BY dept_id
+    ORDER BY sales
+    range BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW
+)
+```
+    * ORDER BY : 누적/순차 계산 기준
+
+    * RANGE : 현재 행 기준으로 "얼마나 앞뒤 행을 포함할지" 범위 설정
+
+* UNBOUNDED PRECEDING : 맨 처음 행부터 현재 행까지의 모든 범위를 의미, 보통 누적합계(累積合計) 만들 때 사용
+
+* 이때 SUM하는 컬럼을 ORDER BY절에 명시하면 RANGE~~이거 안해도 댐
+
+2) MAX/MIN
+```SQL
+SELECT STUDENT_NAME,
+    SUBJECT,
+    SCORE,
+    MAX(SCORE) OVER(PARTITION BY SUBJECT) AS MAX_SCORE
+FROM SQLD
+```
+* 과목별 최대 점수를 받은 사람만 출력하는 쿼리
+```sql
+SELECT student, subject, score
+FROM (
+    SELECT student, subject, score,
+           MAX(score) OVER (PARTITION BY subject) AS max_score
+    FROM scores
+) 
+WHERE score = max_score;
+```
+
+3) AVG
+* 과목별 평균 점수 이상을 받은 사람만 출력하는 쿼리
+```sql
+SELECT student, subject, score
+FROM (
+    SELECT student, subject, score,
+           AVG(score) OVER (PARTITION BY subject) AS avg_score
+    FROM scores
+) t
+WHERE score >= avg_score;
+```
+
+4) COUNT : 데이터 건수  구하는 함수
+```sql
+SELECT STUDENT_NAME,
+    SUBJECT,
+    SCORE,
+    COUNT(*) OVER(PARTITION BY SUBJECT) AS PASS_COUNT
+FROM SQLD
+WHERE RESULT = "PASS"
+```
+
+>### WINDOWING 절을 이용해 집계하는 데이터의 범위를 지정 가능
+
+* 현재 행이란? : 윈도우 함수에서 말하는 “현재 행(Current Row)” 은 단순히 SELECT 결과셋에서 ORDER BY 기준으로 정렬했을 때, 지금 계산 중인 그 행을 뜻합니다.
+
+    📌     윈도우 함수는 행 단위로 실행돼요.
+        한 행을 기준으로 “앞으로 몇 행까지 포함할까?” 혹은 “이 값까지 포함할까?”를 판단할 때 현재 행이라는 말을 써요.
+
+ ```sql
+    <집계함수>() OVER (
+    PARTITION BY ...
+    ORDER BY ...
+    {ROWS | RANGE | GROUPS}
+    BETWEEN <start> AND <end>
+    )
+
+```
+1. 기준
+    (ROWS / RANGE / GROUPS)
+
+    | 기준         | 설명                    | 의미                                  |
+    | ---------- | --------------------- | ----------------------------------- |
+    | **ROWS**   | 행(Row) 개수 단위          | 현재 행을 중심으로 위·아래 몇 개 “행” 포함          |
+    | **RANGE**  | ORDER BY 값의 “값 범위” 단위 | 현재 행의 값 ± 특정 범위까지 포함 (같은 값이면 같이 묶임) |
+    | **GROUPS** | ORDER BY의 동일 값 집합 단위  | 같은 값끼리 하나의 그룹으로 묶고 그룹 단위로 범위 설정     |
+
+
+2. 범위 지정 키워드
+
+    | 키워드                     | 의미                                                |
+    | ----------------------- | ------------------------------------------------- |
+    | **UNBOUNDED PRECEDING** | 파티션의 맨 앞부터                                        |
+    | **N PRECEDING**         | 현재 행 이전 N개 (ROWS 기준) / **N단위 이전 (RANGE/GROUPS 기준)**   |
+    | **CURRENT ROW**         | 지금 계산 중인 행 (ROWS) / 현재 값 (RANGE) / 현재 그룹 (GROUPS) |
+    | **N FOLLOWING**         | 현재 행 이후 N개 (ROWS 기준) / N단위 이후 (RANGE/GROUPS 기준)   |
+    | **UNBOUNDED FOLLOWING** | 파티션의 맨 끝까지                                        |
+
+
+* COUNT + WINDOWING절을 이용한 범위 지정
+    * 범위 내에 현재 행이 포함된다면(BETWWEEN CURRENT ROW 등) 카운트 한다
+eg) 과목별로 본인보다 점수가 높거나 같은 건수를 카운트 하는 쿼리
+```sql
+SELECT STUDENT_NAME,
+    SUBJECT,
+    SCORE,
+    COUNT(*) OVER(PARTITION BY SUBJECT -- PARTITION BY를 쓰면 모든 연산은 그 파티션 안에서만 수행됩니다.
+                ORDER BY SCORE DESC
+                RANGE UNBOUNDED PRECEDING) AS HIGHER_COUNT -- RANGE → ORDER BY 값이 동일하면 같이 묶어서 처리
+FROM SQLD
+```
+* ```RANGE UNBOUNDED PRECEDING``` = ```RANGE BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW```
+
+결과
+| STUDENT | SUBJECT | SCORE | CNT |
+| ------- | ------- | ----- | --- |
+| A       | 수학      | 90    | 1   |
+| B       | 수학      | 80    | 2   |
+| C       | 수학      | 70    | 3   |
+| D       | 영어      | 95    | 1   |
+| E       | 영어      | 85    | 2   |
+
++ 이떄 ```COUNT(*) OVER (PARTITION BY subject)```는 ORDER BY가 없으므로, 누적 개수 X 그냥 파티션 크기 그대로
+
++ ```COUNT(*) OVER (PARTITION BY subject ORDER BY score)``` : ORDER BY가 들어갔으므로 윈도우 프레임이 "시작 ~ 현재 행"으로 기본 설정됨
+
+
+eg2) 본인 점수와 5점 이하로 차이나거나 점수가 같은 건수 카운트
+```sql
+SELECT STUDENT, SUBJECT, SCORE,
+       COUNT(*) OVER (
+         PARTITION BY SUBJECT
+         ORDER BY SCORE
+         RANGE BETWEEN 5 PRECEDING AND 5 FOLLOWING
+       ) AS CNT_IN_RANGE
+FROM scores;
+```
+* ROWS → 행(row) 단위 => "앞으로 5행, 뒤로 5행"
+
+* RANGE → 값(value) 단위 (ORDER BY 컬럼 기준) => "현재 값 ±5 범위" (즉, 값의 차이로 범위 결정)
+
+### 3. 행 순서 함수
+
+1. FIRST_VALUE : 파티션 가장 선두끝에 위치한 데이터를 구하는 함수
+* 과목별로 가장 높은 점수를 구하는 쿼리
+```sql
+SELECT NAME,
+    SUBJECT,
+    SCORE,
+    FIST_VALUE(SCORE) OVER(PARTITION BY SUBJECT ORDER BY SCORE DESC) AS FIST_VALUE
+FROM SQLD
+```
+
+2. LAST_VALUE : 파티션 가장 끝에 위치한 데이터 구함
+* 이름만 보면 "파티션 마지막 값" 같지만, 실제로는 윈도우 프레임 내 마지막 값을 가져옴.
+
+* 그런데 기본 윈도우 프레임(WINDOWING) DEFAULT값이 ```RANGE UNBOUNDED PRECEDING``` 이라서, 그냥 쓰면 "현재 행 값"이 나옴.
+=> windowing 절 명시해야함
+
+
+```sql
+LAST_VALUE(col) OVER (
+  ORDER BY col
+  ROWS BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING
+)
+```
+
+3. LAG/LEAD : 파티션 별로 **"현재 행 기준으로 이전/뒤 행의 값을 가져오는 함수"**입니다. 즉, ORDER BY 기준으로 "앞/뒤를 돌아본다(LAG)" 라고 이해하면 돼요.
+
+```sql
+LAG(column, offset, default)
+  OVER (PARTITION BY ... ORDER BY ...)
+```
+column : 참조할 컬럼
+
+offset : 몇 행 이전 값을 가져올지 (기본값 1 → 바로 이전 행)
+
+default : 이전 행이 없을 때 대신 표시할 값 (기본값 NULL)
+
+PARTITION BY : 그룹 단위로 나누어 계산 (없으면 전체 기준)
+
+ORDER BY : 순서를 정의해야 "이전 행"이 정해짐
+
+* LAG : offset만큼 위의 행(앞의 행)을 본다
+* LEAD : offset만큼 아래의 행(뒤의 행)을 본다
+
+### 3. 비율 함수
+1. RATIO_TO_REPORT : 파티션 별 합계에서 차지하는 비율을 구하는 함수, 0~1사이
+* 과목별 score 합계에서 차지하는 비율을 구하는 쿼리
+```sql
+SELECT NAME,
+    SUBJECT,
+    SCORE,
+    SUM(SCORE) OVER (PARTITION BY SUBJECT) AS SUM
+    SCORE/SUM(SCORE) OVER(PARTITION BY SUBJECT) AS "SCORE/SUM",
+    RATIO_TO_REPORT(SCORE) OVER(PARTITION BY SUBJECT) AS RATIO_TO_REPORT -- score/sum과 같은 결과가 나옴
+FROM SQLD;
+```
+2. PERCENT_RAN : 해당 파티션의 맨 위 끝 행을 0, 맨 아래 끝 행을 1로 놓고 현재 행이 위치하는 백분위 순위 값을 구함, 0~1사이
+
+3. CUME_DIST : 해당 파티션에서 누적 백분율 구하는 함수, 0~1사이 값 가짐
+    * 현재 행까지 누적 건수/전체 건수임
+
+4. NTILE
+* NTILE(n) : 결과 집합을 n등분으로 나누는 윈도우 함수, 순서(ORDER BY) 기준으로 데이터를 나눔
+
+* 각 행에 "몇 번째 구간(tile)"에 속하는지를 반환
+
+    👉 즉, 분위수(quartile, percentile) 계산에 자주 쓰입니다.
+
+```sql
+NTILE(n) OVER (PARTITION BY col ORDER BY col2)
+```
+n : 나눌 구간 수 (예: 2 → 반으로 나누기, 4 → 4분위수, 100 → 백분위수)
+
+PARTITION BY : 그룹별로 구간 나누기 (선택사항)
+
+ORDER BY : 정렬 기준 (필수!)
+
+eg) 학생 점수를 4분위수(Quartile)로 나누고 싶을 때:
+```sql
+SELECT student_name,
+       score,
+       NTILE(4) OVER (ORDER BY score DESC) AS quartile
+FROM exam;
+```
+
+좋은 질문이에요 👏 **NTILE**이 실제 데이터에서 애매한 경우(행 수가 나누어떨어지지 않거나 동일 값이 있을 때) 어떻게 동작하는지 정리해드릴게요.
+
+---
+## NTILE +@
+>1️⃣ 행 수가 **n으로 나누어떨어지지 않을 때**
+
+* `NTILE(n)`은 **가능한 한 균등하게** 나눔.
+* 나머지가 생기면, **앞쪽 그룹부터 1명씩 더 배정**.
+
+예: 10명을 3등분 →
+
+* 몫: 10 ÷ 3 = 3명씩
+* 나머지: 1명 → 앞쪽 그룹에 추가
+  👉 그룹 분배: `4명 / 3명 / 3명`
+
+---
+
+>2️⃣ 동일한 값(동점)이 있을 때
+
+* **값이 같더라도** `ORDER BY`를 기준으로 순서를 매긴 후 그대로 그룹에 배정함.
+* 즉, **NTILE은 값 자체가 아니라 행 단위로 분배**하는 함수라서, 같은 점수를 받았더라도 다른 그룹에 들어갈 수 있음.
+
+예: 학생 7명 점수 → `95, 90, 90, 85, 80, 70, 60`
+`NTILE(3)` →
+
+| student | score | tile |                      |
+| ------- | ----- | ---- | -------------------- |
+| A       | 95    | 1    |                      |
+| B       | 90    | 1    |                      |
+| C       | 90    | 2    | ← 같은 점수지만 다음 그룹에 배정됨 |
+| D       | 85    | 2    |                      |
+| E       | 80    | 2    |                      |
+| F       | 70    | 3    |                      |
+| G       | 60    | 3    |                      |
+
+👉 `RANK()`와 달리, **동점이라고 해서 같은 tile 번호를 보장하지 않음**.
+
+
+>## 6. TOP-N 쿼리
+개념 : topp n개의 데이터를 추출하는 쿼리
+
+### 1. ROWNUM()
+* ROWNUM = PSEUDO(가짜) 컬럼임 -> 존재 하지 않는 가짜 컬럼이라는 뜻
+* index 느낌으로 행 번호를 매겨주는 함수
+
+>왜 WHERE ROWNUM = 5가 안 되는가?
+
+이유는 ROWNUM이 부여되는 방식 때문이에요.
+```
+WHERE 절을 먼저 실행 → 조건 검사
+
+조건을 만족하는 행이 있으면 그 행에 ROWNUM = 1 부여
+
+그다음 행은 ROWNUM = 2, 이런 식으로 번호 매겨짐
+```
+    즉, ROWNUM은 조건 필터링이 끝나야 매겨지는 번호라서:
+
+>ROWNUM = 5라고 쓰면 → 처음부터 "5번 행을 가져와야 한다"는 조건인데, 애초에 행이 추가되면서 차례대로 1부터만 부여되기 때문에 5라는 값은 최초엔 절대 만족할 수 없음. 그래서 결과는 항상 NULL이에요.
+
+* 그래서 결국 <, <= 조건은 가능함
+
+✅ 그럼 "5번째 행만" 가져오려면?
+
+ROWNUM만으로는 불가능하고, 서브쿼리 또는 ROW_NUMBER() 윈도우 함수를 써야 해요.
+
+
+#### 1. FROM 절에 서브쿼리 + ORDER BY
+```SQL
+SELECT *
+FROM (
+    SELECT e.*, ROWNUM rn
+    FROM (
+        SELECT * 
+        FROM emp
+        ORDER BY score DESC
+    ) e
+)
+WHERE rn <= 5;
+```
+* 안쪽 서브쿼리에서 먼저 ORDER BY score DESC 실행 → 점수 순으로 정렬된 결과셋 나옴
+
+* 그 결과에 ROWNUM 부여 → 1,2,3,4,5,...
+
+* 바깥쪽에서 WHERE rn <= 5 조건 적용 → 성적순 Top 5 학생 추출 ✅ (정상 동작)
+
+#### 2. 서브쿼리 없이 직접 ROWNUM <= 5, ORDER BY
+```SQL
+SELECT *
+FROM emp
+WHERE ROWNUM <= 5
+ORDER BY score DESC;
+```
+* FROM으로 emp 불러옴
+
+* WHERE ROWNUM <= 5 먼저 실행됨 → 앞에서 가져온 5개 행에만 ROWNUM 부여
+
+* 이미 5개 행만 확정됨 → 그다음에 ORDER BY score DESC 적용됨
+
+* 결과: "점수순으로 정렬된 5명"이 아니라, "임의로 뽑힌 5명"을 점수순 정렬 ⚠️
+
+
+
+### 2. 윈도우 함수의 순위 함수
+: 앞서 나온 윈도우 함수의 row_number, rank, dense rank 등의 함수로 top-N쿼리 작성 가능
+
+1. ROW_NUMBER() : 중복 점수 고려 ❌, 무조건 순서 번호, 같은 점수여도 다른 번호
+```sql
+SELECT *
+FROM (
+    SELECT NAME, SUBJECT, SCORE,
+           ROW_NUMBER() OVER (PARTITION BY SUBJECT ORDER BY SCORE DESC) AS RN
+    FROM STUDENT
+)
+WHERE RN <= 3;
+```
+2. RANK() : 중복 점수 고려 ⭕, 순위 건너뜀
+```sql
+SELECT *
+FROM (
+    SELECT NAME, SUBJECT, SCORE,
+           RANK() OVER (PARTITION BY SUBJECT ORDER BY SCORE DESC) AS RK
+    FROM STUDENT
+)
+WHERE RK <= 3;
+```
+
+3. DENSE_RANK() : 중복 점수 고려 ⭕, 순위 연속
+```sql
+SELECT *
+FROM (
+    SELECT NAME, SUBJECT, SCORE,
+           RANK() OVER (PARTITION BY SUBJECT ORDER BY SCORE DESC) AS RK
+    FROM STUDENT
+)
+WHERE RK <= 3;
+
+```
+>## 7. 셀프 조인
+
+>## 8. 계층 쿼리
+
+>## 9. PIVOT, UNPIVOT 절
+
+>## 10 정규 표현식
