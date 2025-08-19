@@ -347,7 +347,7 @@ FROM STUDENTS;
 
     2) 순서를 변경하고 싶다면 order by절에 ```nulls first, nulls last```옵션을 써서 순서 변경 가능
 
-* SELECT에서 별칭을 붙였어도, ORDER BY에서는 원래 칼럼명 써도 되고 별칭 써도 됌
+* SELECT에서 별칭을 붙였어도, ORDER BY에서는 원래 칼럼명 써도 되고 별칭 써도 됌 + SELECT절의 칼럼 순서(1,2,3..)으로 써도 가능
 
 >## JOIN
 
@@ -424,7 +424,7 @@ WHERE A.PRODUCT_CODE = B.PRODUCT_CODE
 **: ANSI SQL중 하나로 RDBMS에 상관 없이 돌아가는 조인 쿼리!!!**
 
 ***1) INNER JOIN : ON절을 사용해 작성***
-    ```SQL
+ ```sql
     SELECT A.PRODUCT_CODE,
         A.PRODUCT_NAME,
         B.MEMBER_ID,
@@ -432,13 +432,14 @@ WHERE A.PRODUCT_CODE = B.PRODUCT_CODE
         B.REG_DATE
     FROM PRODUCT A INNER JOIN PRODUCT_REVIEW B
         ON A.PRODUCT_CODE = B.PRODUCT_CODE
-    ```
+ ```
 
 ***2. OUTER JOIN***
 
-    1) LEFT OUTER JOIN : 왼쪽 테이블(A)의 모든 행을 결과에 포함.
+   
+ 1) LEFT OUTER JOIN : 왼쪽 테이블(A)의 모든 행을 결과에 포함.
 
-        * 오른쪽 테이블(B)에 매칭되는 값이 없으면 NULL로 채움.
+    * 오른쪽 테이블(B)에 매칭되는 값이 없으면 NULL로 채움.
         ```SQL
         SELECT e.emp_name, d.dept_name
         FROM Employee e
@@ -447,9 +448,9 @@ WHERE A.PRODUCT_CODE = B.PRODUCT_CODE
         ```
         ```모든 직원은 출력, 부서가 없는 직원은 dept_name = NULL```
 
-    2) RIGHT OUTER JOIN : 오른쪽 테이블(B)의 모든 행을 결과에 포함.
+ 2) RIGHT OUTER JOIN : 오른쪽 테이블(B)의 모든 행을 결과에 포함.
 
-        * 왼쪽 테이블(A)에 매칭되는 값이 없으면 NULL로 채움.
+    * 왼쪽 테이블(A)에 매칭되는 값이 없으면 NULL로 채움.
 
         ```SQL
         SELECT e.emp_name, d.dept_name
@@ -458,8 +459,8 @@ WHERE A.PRODUCT_CODE = B.PRODUCT_CODE
         ON e.dept_id = d.dept_id;
         ```
          ```모든 부서는 출력, 직원이 없는 부서는 emp_name = NULL```
-    3) FULL OUTER JOIN : 양쪽 테이블의 모든 행을 결과에 포함.
-        * 합집합이므로 한쪽에 매칭 값이 없으면 NULL.
+3) FULL OUTER JOIN : 양쪽 테이블의 모든 행을 결과에 포함.
+     * 합집합이므로 한쪽에 매칭 값이 없으면 NULL.
         ```sql
         SELECT e.emp_name, d.dept_name
         FROM Employee e
@@ -467,22 +468,22 @@ WHERE A.PRODUCT_CODE = B.PRODUCT_CODE
         ON e.dept_id = d.dept_id;
         ```
 
-    ***4) 주의사항 : ON절에서 조건과 WHERE 절에서 조건 차이
-    다음과 같이 정리할 수 있
+***4) 주의사항 : ON절에서 조건과 WHERE 절에서 조건 차이***
+    다음과 같이 정리할 수 있다
 
-        ```sql
-        SELECT *
-        FROM SAMPLE1 A RIGHT OUTER JOIN SAMPLE2 B
-            ON (A.COL1 = B.COL1 AND B.COL2 IS NOT NULL);
-        ```
+```sql
+SELECT *
+FROM SAMPLE1 A RIGHT OUTER JOIN SAMPLE2 B
+ON (A.COL1 = B.COL1 AND B.COL2 IS NOT NULL);
+```
 
-        •	RIGHT OUTER JOIN에서 기준이 되는 테이블은 SAMPLE2 (B)
+•	RIGHT OUTER JOIN에서 기준이 되는 테이블은 SAMPLE2 (B)
 
-        •	따라서 SAMPLE2의 모든 행이 결과에 포함된다.
+•	따라서 SAMPLE2의 모든 행이 결과에 포함된다.
 
-        •	ON 절 조건(A.COL1 = B.COL1 AND B.COL2 IS NOT NULL)은 조인 매칭 여부만 결정한다.
+•	ON 절 조건(A.COL1 = B.COL1 AND B.COL2 IS NOT NULL)은 ```조인 매칭 여부만 결정한다.```
 
-        •	B.COL2가 NULL이면 조인 매칭은 실패하지만, 보존 테이블이므로 해당 행은 결과에 남고 A쪽 값이 NULL로 채워진다.
+•	B.COL2가 NULL이면 조인 매칭은 실패하지만, 보존 테이블이므로 해당 행은 결과에 남고 A쪽 값이 NULL로 채워진다.
         
     테이블: 
     SAMPLE 1
@@ -512,8 +513,8 @@ WHERE A.PRODUCT_CODE = B.PRODUCT_CODE
     | NULL   | NULL   | 5      | E      |
 
 
-    * ON에 조건이 있을 경우 → (3, NULL) 포함 (좌측이 NULL)
-    * WHERE에 B.COL2 IS NOT NULL 조건이 있을 경우 → (3, NULL) 제거됨
+* ON에 조건이 있을 경우 → (3, NULL) 포함 (좌측이 NULL)
+* WHERE에 B.COL2 IS NOT NULL 조건이 있을 경우 → (3, NULL) 제거됨
 
 ***3) NATURAL JOIN***
 
