@@ -1081,9 +1081,895 @@ WHERE RK <= 3;
 
 ```
 >## 7. 셀프 조인
+개념 : 같은 테이블을 자기 자신과 조인하는 것. from절에 같은 테이블이 두번 이상 등장하기 때문에 alias 표기해야함
+* 보통 계층 구조(예: 직원–관리자 관계)나 행 간 비교가 필요할 때 사용합니다.
+
+* 예제 1: 직원과 관리자 찾기
+Employee 테이블 구조:
+
+* emp_id
+
+* emp_name
+
+* manager_id (→ 같은 Employee 테이블의 emp_id 참조)
+```sql
+SELECT e.emp_name AS employee,
+       m.emp_name AS manager
+FROM Employee e
+LEFT JOIN Employee m
+  ON e.manager_id = m.emp_id; -- 같은 Employee 테이블을 두 번 불러서 사원과 그의 상사를 연결한 것.  
+```
+| employee | manager |
+| -------- | ------- |
+| 철수       | 영희      |
+| 영희       | 민수      |
+| 민수       | (NULL)  |
+
+* 예제 2: 같은 부서에서 서로 다른 직원 짝짓기
+```sql
+SELECT e1.emp_name AS emp1,
+       e2.emp_name AS emp2,
+       e1.dept_id
+FROM Employee e1
+JOIN Employee e2
+  ON e1.dept_id = e2.dept_id
+ AND e1.emp_id  < e2.emp_id;
+```
+결과: 같은 부서 내 직원들을 페어링해서 보여줄 수 있음. (< 조건으로 중복 제거)
+
+* 예제 3 
+```
+
+EMPLOYEES 테이블에는 다음과 같은 컬럼이 있다.
+
+employee_id : 직원의 고유 ID
+
+name : 직원 이름
+
+manager_id : 해당 직원의 상사의 employee_id
+
+즉, 한 테이블 안에서 직원과 관리자의 관계를 표현하고 있다 -> self join
+```
+정답
+```sql
+SELECT B.employee_id AS manager_id,
+       B.name        AS manager_name,
+       A.employee_id,
+       A.name
+FROM employees A
+JOIN employees B
+  ON A.manager_id = B.employee_id;
+
+```
+
+* A : 직원(Employee) 역할
+* B : 관리자(Manager) 역할
+
+* 조건 A.manager_id = B.employee_id
+→ 직원의 manager_id와 관리자의 employee_id를 연결
+    * a의 매니저 id가 b의 id = a가 직원 역할
+
+
+1. A.manager_id = B.employee_id
+
+    A = 직원
+
+    B = 관리자
+
+    결과: 직원 → 그 직원의 상사
+
+2. A.employee_id = B.manager_id
+
+    A = 관리자
+
+    B = 직원
+
+    결과: 관리자 → 그 관리자가 관리하는 부하 직원
+
+즉, 조인 조건이 달라지면 어느 쪽이 “상사 테이블” 역할인지도 달라진다.
 
 >## 8. 계층 쿼리
+: 테이블 내 계층 구조를 이루는 컬럼이 존재할 경우 계층 쿼리를 이용해 데이터를 출력할 수 있다.
+    * self join을 쉽게 표현 가능
+
+좋습니다 🙆 계층 쿼리에서 자주 쓰이는 핵심 키워드들을 하나씩 풀어드릴게요.
+
+---
+
+### LEVEL
+
+* 오라클 계층 쿼리에서 제공하는 **가상 컬럼**
+* 현재 행이 \*\*트리에서 몇 번째 단계(깊이)\*\*에 속하는지 보여줌
+* 루트 노드 = 1, 그 자식은 2, 그 아래는 3 … 이런 식
+
+예:
+
+```
+Steven (LEVEL=1)
+  Neena (LEVEL=2)
+    Michael (LEVEL=3)
+```
+
+
+
+### SYS\_CONNECT\_BY\_PATH
+
+* 루트에서 현재 노드까지의 \*\*경로(Path)\*\*를 문자열로 반환
+* 구문:
+
+  ```sql
+  SYS_CONNECT_BY_PATH(column, 구분자)
+  ```
+* `구분자`를 기준으로 루트부터 현재 행까지의 계층 경로 표시
+
+
+
+### START WITH
+
+* 계층 구조에서 **탐색을 시작할 루트 행**을 지정
+* 보통 최상위 노드를 찾을 조건을 넣음 (예: `manager_id IS NULL`)
+
+예:
+
+```sql
+START WITH manager_id IS NULL
+```
+
+→ 상위 관리자가 없는 CEO부터 시작
+
+
+
+### CONNECT BY
+
+* 계층을 따라 내려가면서 **부모-자식 관계를 정의**
+* 보통 `CONNECT BY PRIOR parent_column = child_column` 형태
+
+예:
+
+```sql
+CONNECT BY PRIOR employee_id = manager_id
+```
+
+→ “이전 행의 employee\_id가 현재 행의 manager\_id와 같으면 연결”
+
+
+
+### PRIOR
+
+* CONNECT BY 안에서 쓰이며, \*\*부모 노드(이전 단계)\*\*를 가리키는 키워드
+* `PRIOR employee_id = manager_id`
+  → 부모의 employee\_id = 자식의 manager\_id
+
+반대로 하면:
+
+* `PRIOR manager_id = employee_id`
+  → 자식에서 부모로 올라가는 관계 설정 가능
+
+네 좋아요 🙆 이어서 **CONNECT\_BY\_ROOT**, **CONNECT\_BY\_ISLEAF**까지 정리해 드릴게요.
+
+
+
+### CONNECT\_BY\_ROOT
+
+* 현재 노드에서 거슬러 올라갔을 때의 **최상위 루트 노드의 값**을 반환합니다.
+* 구문:
+
+  ```sql
+  CONNECT_BY_ROOT column
+  ```
+* 보통 "이 직원의 최상위 사장은 누구인가?" 같은 질문에 유용합니다.
+
+예시:
+
+```sql
+SELECT employee_id,
+       name,
+       CONNECT_BY_ROOT name AS top_manager
+FROM employees
+START WITH manager_id IS NULL
+CONNECT BY PRIOR employee_id = manager_id;
+```
+
+👉 결과:
+
+| employee\_id | name    | top\_manager |
+| ------------ | ------- | ------------ |
+| 100          | Steven  | Steven       |
+| 101          | Neena   | Steven       |
+| 201          | Michael | Steven       |
+
+
+
+### CONNECT\_BY\_ISLEAF
+
+* 현재 노드가 \*\*리프(leaf, 더 이상 자식이 없는 말단 노드)\*\*인지 여부를 반환합니다.
+* 값:
+
+  * `1` → 리프 노드 (자식 없음)
+  * `0` → 리프 아님 (자식 있음)
+
+예시:
+
+```sql
+SELECT employee_id,
+       name,
+       CONNECT_BY_ISLEAF AS is_leaf
+FROM employees
+START WITH manager_id IS NULL
+CONNECT BY PRIOR employee_id = manager_id;
+```
+
+👉 결과:
+
+| employee\_id | name    | is\_leaf |
+| ------------ | ------- | -------- |
+| 100          | Steven  | 0        |
+| 101          | Neena   | 0        |
+| 201          | Michael | 1        |
+
+
+### 역방향 전개 : 리프 -> 루트로 올라가게 하려면
+```SQL
+SELECT employee_id,
+       name,
+       LEVEL,
+       SYS_CONNECT_BY_PATH(name, ' -> ') AS path
+FROM employees
+START WITH employee_id = 201              -- 리프 노드(말단 직원)부터 시작
+CONNECT BY PRIOR manager_id = employee_id; -- 위로 올라가는 규칙
+```
+    START WITH employee_id = 201 → 말단 직원 Michael부터 시작
+
+    CONNECT BY PRIOR manager_id = employee_id
+
+    여기서 PRIOR manager_id = 부모 행의 manager_id
+
+    employee_id = 현재 행의 employee_id
+
+    즉, 현재 직원의 employee_id가 이전 단계(manager_id)에 해당하면 연결 → 위로 올라감
+
+### 계층 쿼리의 정렬
+* order by 쓰지 않는다
+* 대신 **ORDER SIBLINGS BY**절 사용하여 같은 레벨끼리 정렬되도록 작성 가능
+
+```sql
+SELECT employee_id,
+       name,
+       manager_id,
+       LEVEL
+FROM employees
+START WITH manager_id IS NULL
+CONNECT BY PRIOR employee_id = manager_id
+ORDER SIBLINGS BY name;
+```
+| LEVEL | name      | manager\_id |
+| ----- | --------- | ----------- |
+| 1     | Steven    | (NULL)      |
+| 2     | Alexander | 100         |
+| 2     | Lex       | 100         |
+| 2     | Neena     | 100         |
+
+
 
 >## 9. PIVOT, UNPIVOT 절
+### 1. PIVOT
+* pivot = 회전하다 : 행이 열로 변환되어 가로가 길쭉한 형태로 변하게 된다
+
+* 기본 문법 
+```
+SELECT *
+FROM (
+    SELECT column1, column2, value_column
+    FROM some_table
+)
+PIVOT (
+    AGGREGATE_FUNCTION(value_column)
+    FOR col IN ( '값1' AS alias1, '값2' AS alias2, ... )
+);
+```
+* value_column : 집계할 값
+
+* AGGREGATE_FUNCTION : SUM, COUNT, AVG 같은 집계 함수
+
+* FOR col IN (...) 
+    * col : pivot할 컬럼을 지정
+    * IN() : PIVOT할 컬럼 값을 지정
+
+
+
+* 예시 
+
+데이터 (employees)
+
+```text
+dept    gender  salary
+HR      M       3000
+HR      F       3200
+IT      M       4000
+IT      F       4200
+IT      M       4100
+```
+
+쿼리
+
+```sql
+SELECT *
+FROM (
+    SELECT dept, gender, salary
+    FROM employees
+)
+PIVOT (
+    COUNT(salary)
+    FOR gender IN ('M' AS male, 'F' AS female)
+);
+```
+
+결과
+
+```text
+dept    male    female
+HR      1       1
+IT      2       1
+```
+
+👉 `gender` 값(M/F)이 열로 바뀌고, `COUNT`로 집계됨.
+
+### pivot 컬럼명 규칙
+* 기본적으로 집계함수에 붙은 별칭은 헤더명 끝에 언더바와 함께 표시된다. 집계함수에 별칭이 지정되지 않고 IN절에만 지정되었다면 IN절 별칭만 나온다.
+
+    | 집계함수 별칭 | IN 절 별칭 | 최종 헤더명 형식                       | 예시 컬럼명                 |
+    | ------- | ------- | ------------------------------- | ---------------------- |
+    | 있음      | 있음      | IN절 별칭 + '\_' + 집계별칭            | male\_CNT, female\_CNT |
+    | 없음      | 있음      | IN절 별칭만 표시                      | male, female           |
+    | 있음      | 없음      | 집계별칭만 표시                        | CNT                    |
+    | 없음      | 없음      | 기본 시스템 생성 이름 (예: COUNT(SALARY)) | COUNT(SALARY)          |
+
+### PIVOT 절에서 필터링
+: pivot 절에도 where절로 필터링 가능
+### PIVOT과 여러 집계
+
+* 한 번의 PIVOT에서 SUM, AVG 같이 여러 집계를 동시에 낼 수 있음.
+```sql
+PIVOT (SUM(SALARY) AS SAL, AVG(SALARY) AS AVG
+       FOR DEPT_NAME IN ('IT개발팀' AS IT, '클라우드팀' AS CLOUD)) -- IT_SAL, IT_AVG, CLOUD_SAL, CLOUD_AVG 열이 생김.
+```
+### PIVOT + 여러 기준
+
+* FOR 절에도 컬럼을 추가해 기준 컬럼을 2개 이상 줄수도 있음 → 그룹핑 기준을 늘려 열이 늘어나면서 세분화.
+```sql
+PIVOT (AVG(SALARY) AS AVG
+       FOR (DEPT_NAME, GRADE) 
+       IN (('IT개발팀','과장') AS IT1,
+           ('IT개발팀','차장') AS IT2,
+           ('AI연구팀','과장') AS AI1))
+```
+
+### PIVOT에서 여러 행 출력되는 경우
+
+* 기본 개념
+
+    PIVOT은 **행을 열로 회전(pivoting)시키는 것**이지만,
+    행을 완전히 하나로 합쳐버리는 게 아니라, **집계 기준이 아닌 다른 컬럼이 남아 있으면 그대로 유지**합니다. 즉
+
+* PIVOT 기준 컬럼(`DEPT_NAME`, `GRADE`) → 열로 변환됨
+* 집계 함수(`AVG(SALARY)`) → 값 계산됨
+* **인라인 뷰에 포함된 다른 컬럼(`HIRE_DATE` 같은거)** → 그대로 행에 남음
+
+그래서 `HIRE_DATE`가 있으면, 같은 `DEPT_NAME + GRADE` 조합이라도 날짜별로 행이 여러 개 찍히는 겁니다.
+
+
+* 예시 비교
+
+#### (1) `HIRE_DATE` 포함
+
+```sql
+SELECT *
+FROM (
+    SELECT DEPT_NAME, GRADE, HIRE_DATE, SALARY
+    FROM EMP_INFO
+)
+PIVOT (
+    AVG(SALARY) AS AVG
+    FOR (DEPT_NAME, GRADE) 
+    IN (('IT개발팀','과장') AS IT1,
+        ('IT개발팀','차장') AS IT2,
+        ('AI연구팀','과장') AS AI1)
+);
+```
+
+👉 결과:
+
+| HIRE\_DATE | IT1\_AVG | IT2\_AVG | AI1\_AVG |
+| ---------- | -------- | -------- | -------- |
+| 2020-01-01 | 4500     | (null)   | (null)   |
+| 2020-03-15 | (null)   | 5200     | (null)   |
+| 2020-05-10 | (null)   | (null)   | 4800     |
+
+➡ `HIRE_DATE`가 남아 있으므로 여러 행 출력됨.
+
+
+
+#### (2) `HIRE_DATE` 제거
+
+```sql
+SELECT *
+FROM (
+    SELECT DEPT_NAME, GRADE, SALARY
+    FROM EMP_INFO
+)
+PIVOT (
+    AVG(SALARY) AS AVG
+    FOR (DEPT_NAME, GRADE) 
+    IN (('IT개발팀','과장') AS IT1,
+        ('IT개발팀','차장') AS IT2,
+        ('AI연구팀','과장') AS AI1)
+);
+```
+
+👉 결과:
+
+| IT1\_AVG | IT2\_AVG | AI1\_AVG |
+| -------- | -------- | -------- |
+| 4700     | 5200     | 4800     |
+
+➡ `HIRE_DATE`가 없으니 한 줄로 요약됨.
+
+
+### 2. UNPIVOT 절
+: 열 데이터를 다시 행으로 변환하는 기능. 즉, PIVOT된 애를 다시 원본으로 되돌림.
+
+
+
+예시 데이터 (EMP\_INFO\_PIVOT)
+
+```text
+GRADE   HR_SAL  IT_SAL  AI_SAL  CLOUD_SAL
+과장     7000    8000    7500    (NULL)
+대리     6000    (NULL)  (NULL)  6300
+사원     (NULL)  5000    (NULL)  5000
+차장     (NULL)  9000    9300    9500
+```
+
+---
+
+#### UNPIVOT 적용 쿼리
+
+```sql
+SELECT GRADE, DEPT_NAME, SALARY
+FROM EMP_INFO_PIVOT
+UNPIVOT (
+    SALARY FOR DEPT_NAME IN (HR_SAL, IT_SAL, AI_SAL, CLOUD_SAL)
+)
+ORDER BY GRADE;
+```
+* SELECT절에 있는 DEPT_NAME, SALARY는 실제 emp_info_pivot에 존재하는게 아니라 내가 설정한거
+    * SALARY : 기존 집계 된 칼럼
+    * DEPT_NAME : 기존 PIVOT할 컬럼 
+* emp_info_pivot에 있는 컬럼은 IN절 안에 존재
+
+
+#### 결과
+
+```text
+GRADE   DEPT_NAME   SALARY
+과장     HR_SAL     7000
+과장     IT_SAL     8000
+과장     AI_SAL     7500
+대리     HR_SAL     6000
+대리     CLOUD_SAL  6300
+사원     IT_SAL     5000
+사원     CLOUD_SAL  5000
+차장     IT_SAL     9000
+차장     AI_SAL     9300
+차장     CLOUD_SAL  9500
+```
+
+👉 `HR_SAL, IT_SAL, AI_SAL, CLOUD_SAL` 컬럼이 행으로 변환됨.
+👉 `DEPT_NAME`, `SALARY` 컬럼은 UNPIVOT 구문에서 새로 만들어짐.
+
+---
+
+#### 옵션: ALIAS 지정
+
+```sql
+SELECT GRADE, DEPT_NAME, SALARY
+FROM EMP_INFO_PIVOT
+UNPIVOT (
+    SALARY FOR DEPT_NAME IN (
+        HR_SAL AS '인사팀',
+        IT_SAL AS 'IT개발팀',
+        AI_SAL AS 'AI연구팀',
+        CLOUD_SAL AS '클라우드팀'
+    )
+)
+ORDER BY GRADE;
+```
+
+결과
+
+```text
+GRADE   DEPT_NAME   SALARY
+과장     인사팀     7000
+과장     IT개발팀   8000
+과장     AI연구팀   7500
+대리     인사팀     6000
+대리     클라우드팀 6300
+...
+```
+
+👉 IN 절에서 별칭을 지정하면 변환된 `DEPT_NAME`에 그대로 반영됨.
+
+### pivot vs unpivot
+* pivot: 인라인 뷰, 집계함수, 데이터를 나열한 IN절
+* unpivot : 결과 데이터에 출력될 헤더명 네이밍, IN절에는 기존 칼럼명 
+
+#### 옵션: INCLUDE NULLS
+
+* 기본적으로 UNPIVOT은 NULL 값은 제외
+* `INCLUDE NULLS` 옵션을 주면 NULL도 행으로 출력됨
+
+```sql
+SELECT GRADE, DEPT_NAME, SALARY
+FROM EMP_INFO_PIVOT
+UNPIVOT INCLUDE NULLS
+( SALARY FOR DEPT_NAME IN (HR_SAL, IT_SAL, AI_SAL, CLOUD_SAL) )
+ORDER BY GRADE;
+```
+
+
 
 >## 10 정규 표현식
+: 특정 규칙에 맞는 문자열 패턴을 정의하는 식
+
+* 기본 연산자
+
+| 연산자      | 의미                  | 예시                                             |        |                     |
+| -------- | ------------------- | ---------------------------------------------- | ------ | ------------------- |
+| `.`      | 임의의 한 글자            | `'a.c'` → `abc`, `axc` 매칭                      |        |                     |
+| `*`      | 0회 이상 반복            | `'ab*'` → `a`, `ab`, `abb`, `abbb...`          |        |                     |
+| `+`      | 1회 이상 반복            | `'ab+'` → `ab`, `abb`, `abbb...` (단 `a` 단독은 X) |        |                     |
+| `?`      | 0회 또는 1회 등장         | `'ab?'` → `a`, `ab`                            |        |                     |
+| `{m}`    | 정확히 m번 반복           | `'a{3}'` → `aaa`                               |        |                     |
+| `{m,n}`  | m\~n번 반복            | `'a{2,4}'` → `aa`, `aaa`, `aaaa`               |        |                     |
+| `^`      | 문자열 시작              | `'^abc'` → `abc...`로 시작하는 문자열                  |        |                     |
+| `$`      | 문자열 끝               | `'xyz$'` → `...xyz`로 끝나는 문자열                   |        |                     |
+| \|       | \|                  | OR 조건                                          | \`'cat | dog'`→`cat`또는`dog\` |
+| `[...]`  | 문자 집합(1글자)          | `'[abc]'` → `a` 또는 `b` 또는 `c`                  |        |                     |
+| `[^...]` | 제외 문자 집합            | `'[^0-9]'` → 숫자가 아닌 문자                         |        |                     |
+### 1. REGEXP_SUBSTR
+기본 문법 (Oracle 기준)
+```sql
+REGEXP_SUBSTR(source_string, pattern [, position [, occurrence [, match_param ]]])
+```
+| 인자              | 설명                                                                                   |
+| --------------- | ------------------------------------------------------------------------------------ |
+| `source_string` | 검색 대상 문자열                                                                            |
+| `pattern`       | 찾을 정규표현식 패턴                                                                          |
+| `position`      | 검색 시작 위치 (기본값 = 1, 즉 문자열 첫 글자부터)                                                     |
+| `occurrence`    | 몇 번째 매칭 결과를 반환할지 지정 (기본값 = 1)                                                        |
+| `match_param`   | 대소문자 구분 여부, 단일행/다중행 모드 등 옵션 (`'i'` = 대소문자 무시, `'c'` = 대소문자 구분, `'n'` = `.`이 개행 포함 등) |
+
+
+```sql
+select REGEXP_SUBSTR("SQL", "S|L") 
+```
+-> SQL이란 단어에서 S OR L을 찾아 첫번째로 일치하는 문자를 출력
+-> "S"
+```sql
+select REGEXP_SUBSTR("SQL", "SQL|D") 
+```
+-> "SQL"
+
+### 패턴을 나타내는 연산자
+
+
+## 대괄호 `[...]`
+
+* **문자 집합(Character class)**
+* 안에 들어있는 문자 중 **하나만 매칭**됨.
+
+예시:
+
+```regex
+[abc]   → a, b, c 중 하나
+[0-9]   → 숫자 하나 (0 ~ 9)
+[sq]l  → sl or ql 중 첫번째로 일치하는 문자열
+```
+
+---
+
+## 부정 집합 `[^...]`
+
+* 대괄호 안에서 `^`가 맨 앞에 있으면 **NOT(부정)** 의미
+* 즉, 지정된 집합을 제외한 나머지 문자와 매칭
+
+예시:
+
+```regex
+[^0-9]  → 숫자가 아닌 문자
+[^abc]  → a, b, c 이외의 문자
+📌 [^sq]l → sl도 ql도 아닌 l로 끝나는 두글자의 문자열을 찾아 출력한다
+```
+
+---
+
+## 하이픈 `[-]`
+
+* 대괄호 안에서는 **범위 지정**에 사용
+* `a-z`, `0-9`처럼 연속된 범위를 표현 가능
+
+예시:
+
+```regex
+[a-z]   → 소문자 알파벳 하나
+[0-9]   → 숫자 하나
+[A-F0-9] → 16진수 문자 하나 (0~9, A~F)
+```
+
+※ `-`를 문자 그대로 쓰고 싶으면 대괄호 맨 앞이나 맨 뒤에 배치:
+
+```regex
+[-AB]   → '-', 'A', 'B' 중 하나
+[AB-]   → 'A', 'B', '-' 중 하나
+```
+
+---
+
+## 소괄호 `( ... )`
+
+* **그룹(Grouping)**
+* OR 조건(`|`)을 묶거나, 반복(`*`, `+`, `{m,n}`) 범위를 지정
+
+예시:
+
+```regex
+(cat|dog) → 'cat' 또는 'dog'
+(ab)+     → 'ab', 'abab', 'ababab'
+```
+
+---
+
+## 중괄호 `{m,n}`
+
+* **반복 횟수 지정**
+
+예시:
+
+```regex
+a{3}    → 'aaa'
+a{2,4}  → 'aa', 'aaa', 'aaaa'
+a{2,}   → 'aa' 이상 반복
+```
+
+---
+
+## 정리 표
+
+| 기호       | 의미       | 예시       | 매칭 결과         |                |
+| -------- | -------- | -------- | ------------- | -------------- |
+| `[...]`  | 문자 집합    | `[abc]`  | a, b, c 중 하나  |                |
+| `[^...]` | 부정 문자 집합 | `[^0-9]` | 숫자가 아닌 문자     |                |
+| `[-]`    | 범위 지정    | `[a-z]`  | 소문자 알파벳 하나    |                |
+| `()`     | 그룹핑      | \`(cat   | dog)\`        | 'cat' 또는 'dog' |
+| `{m,n}`  | 반복 횟수    | `a{2,4}` | aa, aaa, aaaa |                |
+
+
+### POSIX 문자 클래스
+
+| 연산자 (POSIX)     | 의미                            | 동일한 정규식 기호          |
+| --------------- | ----------------------------- | ------------------- |
+| `[:alnum:]`     | 영문자 + 숫자 (알파벳/숫자)             | `[A-Za-z0-9]`, `\w` |
+| `[:alpha:]`     | 영문자 (알파벳)                     | `[A-Za-z]`          |
+| `[:digit:]`     | 숫자 (0\~9)                     | `[0-9]`, `\d`       |
+| `[:xdigit:]`    | 16진수 숫자 (0-9, A-F, a-f)       | `[0-9A-Fa-f]`       |
+| `[:lower:]`     | 소문자 알파벳                       | `[a-z]`             |
+| `[:upper:]`     | 대문자 알파벳                       | `[A-Z]`             |
+| `[:blank:]`     | 공백(스페이스, 탭)                   | `[ \t]`             |
+| `[:space:]`     | 공백 문자 전체 (스페이스, 탭, 개행 등)      | `\s`                |
+| `[:punct:]`     | 구두점 문자 (.,;:?! 등)             | `[[:punct:]]`       |
+
+* 구두점 문자: 문장 내 의미를 명확히하거나 문장 구조를 나타내는 기호를 의미하며 특수문자 포함한다
+
+### 문자열 시작과 끝
+
+^ : 문자열 시작
+
+$ : 문자열 끝
+
+^[A-Z] : 대문자로 시작
+
+[A-Z]$ : 대문자로 끝
+
+### 이메일, 전화번호 정규 표현식
+
+
+
+```sql
+-- 📌 이메일 정규표현식
+[[:alnum:]._%+-]+@[[:alnum:].-]+\.[[:alpha:].]{2,}
+```
+
+| 기호          | 설명                                             |
+| ----------- | ---------------------------------------------- |
+| `[ ... ]`   | 문자 집합(Character Class). 안에 있는 어떤 문자든 한 글자에 매칭됨 |
+| `[:alnum:]` | POSIX 문자 클래스. 알파벳 대소문자(A-Z, a-z) + 숫자(0-9)     |
+| `.`         | 원래는 "임의의 한 문자"를 의미. 하지만 문자 집합 안에서는 마침표(`.`) 자체 |
+| `_ % + -`   | 특수문자 그대로 허용됨                                   |
+| `+`         | 앞 패턴이 1회 이상 반복됨. 예: `[a-z]+` → 소문자가 하나 이상      |
+| `@`         | 리터럴 문자. 실제 `@` 기호와 매칭                          |
+| `\.`        | 실제 마침표(`.`)와 매칭. (`.`는 임의 문자이므로 이스케이프 필요)      |
+| `{2,}`      | 앞 패턴이 2회 이상 반복. 예: `[A-Z]{2,}` → 대문자 2개 이상     |
+| `[:alpha:]` | 알파벳(A–Z, a–z)                                  |
+
+---
+
+```sql
+-- 📌 전화번호 정규표현식
+010[-]?[0-9]{3,4}[-]?[0-9]{4}
+```
+
+| 기호      | 설명                                                 |
+| ------- | -------------------------------------------------- |
+| `010`   | 문자열 그대로 "010"과 일치                                  |
+| `[-]?`  | 문자 집합 `[-]` → 하이픈(`-`) 1개. `?` → 0번 또는 1번 나타날 수 있음 |
+| `[0-9]` | 숫자 0부터 9까지 중 한 자리                                  |
+| `{3,4}` | 숫자가 3자리 또는 4자리 반복됨 (`123`, `1234`)                 |
+| `{4}`   | 숫자 4자리 고정                                          |
+
+
+
+### 2. `REGEXP_REPLACE` 함수
+
+문자열 내에서 정규표현식 패턴과 일치하는 부분을 **모두** 찾아 지정한 다른 문자열로 교체한다.
+데이터 변환이나 텍스트 필드 내 특정 패턴을 찾아 바꾸는 데 유용하다.
+
+```sql
+SELECT REGEXP_REPLACE('My phone number is 010-1234-5678', '[0-9]', '*') AS RESULT1,
+       REGEXP_REPLACE('My phone number is 02(123)5678', 
+                      '([[:digit:]]{2})([[:digit:]]{3})([[:digit:]]{4})',
+                      '(\1) \2-\3') AS RESULT2
+FROM DUAL;
+```
+
+**결과**
+
+* RESULT1 → `My phone number is ***-****-****`
+* RESULT2 → `My phone number is (02) 123-5678`
+
+---
+
+#### 📌 Level Up Test
+
+```sql
+SELECT REGEXP_REPLACE('AB12–CD34', '[A-Z]{2}', '**') AS result
+FROM DUAL;
+```
+
+✅ 정답: `**12–**34`
+
+---
+
+### 3. `REGEXP_INSTR` 함수
+
+문자열에서 정규표현식 패턴과 일치하는 부분의 **위치**를 반환한다.
+
+```sql
+SELECT REGEXP_INSTR('apple, banana, cherry', 'banana') AS R1,
+       REGEXP_INSTR('My phone number is 123-456-7890', '[0-9]', 1, 2) AS R2,
+       REGEXP_INSTR('123-456-7890 is my phone number', '[0-9]', 15, 2) AS R3,
+       REGEXP_INSTR('apple, banana, cherry', 'banana', 1, 1, 1) AS R4,
+       REGEXP_INSTR('Apple, banana, Cherry', 'cherry', 1, 1, 0, 'i') AS R5
+FROM DUAL;
+```
+
+해석
+```
+R1 = 8
+'banana'가 "apple, banana, cherry"에서 처음 나타나는 위치는 8번째 문자.
+
+R2 = 18
+'My phone number is 123-456-7890'에서 숫자([0-9])를 찾는데, 두 번째로 나오는 숫자의 위치.
+첫 번째 숫자는 17번째(1), 두 번째 숫자는 18번째(2).
+
+R3 = 0
+'123-456-7890 is my phone number'에서 15번째 문자부터 검색 시작.
+하지만 15번째 이후에는 숫자가 두 개 이상 나오지 않음 → 0 반환.
+
+R4 = 14
+'apple, banana, cherry'에서 'banana'를 찾되, 첫 번째 매치의 끝 위치를 반환하도록 설정.
+'banana'는 8~13번째 문자 → 끝 위치는 14.
+
+R5 = 16
+'Apple, banana, Cherry'에서 'cherry'를 찾는데, 'i' 옵션(대소문자 무시).
+"Cherry"는 16번째부터 시작 → 결과는 16.
+```
+---
+
+#### 📌 Level Up Test
+
+```sql
+SELECT REGEXP_INSTR('abc123def456ghi', '[0-9]+', 1, 2) AS result
+FROM DUAL;
+```
+
+✅ 정답: `10`
+(두 번째 숫자 시퀀스 `456`의 시작 위치는 10번째)
+
+---
+
+### 4. `REGEXP_COUNT` 함수
+
+문자열 내 정규표현식 패턴이 몇 번 나타나는지 횟수를 반환한다.
+
+```sql
+SELECT REGEXP_COUNT('There are 123 apples and 456 oranges', '[0-9]') AS R1,
+       REGEXP_COUNT('There are 123 apples and 456 oranges', '[0-9]', 15) AS R2,
+       REGEXP_COUNT('apple, banana, cherry, date', ',') AS R3,
+       REGEXP_COUNT('Apple, apple, APPLE', 'apple', 1, 'i') AS R4,
+       REGEXP_COUNT('Apple, apple, APPLE', 'apple', 1, 'c') AS R5
+FROM DUAL;
+```
+
+
+---
+해석
+```
+R1 = 6
+'There are 123 apples and 456 oranges'에서 [0-9] 숫자 개수.
+123 → 3개, 456 → 3개 → 총 6개.
+
+R2 = 3
+같은 문자열에서 15번째 위치부터 숫자 개수 세기.
+"123 apples and 456 oranges"에서 15번째 이후엔 "456"만 있음 → 3개.
+
+R3 = 3
+'apple, banana, cherry, date'에서 ,의 개수. → 3개.
+
+R4 = 3
+'Apple, apple, APPLE'에서 'apple' 찾기, 'i' 옵션으로 대소문자 무시.
+"Apple", "apple", "APPLE" → 총 3개.
+
+R5 = 1
+같은 문자열에서 'apple' 찾기, 'c' 옵션으로 대소문자 구분., c가 기본값
+"apple" (소문자만) → 1개 → 1.
+```
+
+#### 📌 Level Up Test
+
+```sql
+SELECT REGEXP_COUNT('123123123123123', '123', 1) AS R1,
+       REGEXP_COUNT('123123123123123', '123', 3) AS R2
+FROM DUAL;
+```
+
+✅ 정답: `5, 3`
+
+---
+
+### 5. `REGEXP_LIKE` 조건
+
+정규표현식을 사용해 문자열 패턴과 일치 여부를 확인하는 조건식.
+데이터를 필터링할 때 사용되며, `LIKE` 연산자보다 강력한 패턴 매칭 가능.
+
+```sql
+SELECT FIRST_NAME, LAST_NAME
+FROM HR.EMPLOYEES
+WHERE REGEXP_LIKE(FIRST_NAME, '^Ste(v|ph)en$');
+```
+* 해석 
+```
+^ → 문자열의 시작
+
+Ste → "Ste"로 시작해야 함
+
+(v|ph) → "v" 또는 "ph" 중 하나
+
+en → "en"으로 끝나야 함
+
+$ → 문자열의 끝
+
+즉, Steven 또는 Stephen 만 매칭됩니다.
+```
+
+>## 적중 예상 문제
+
