@@ -500,9 +500,31 @@ CREATE TABLE employees (
 ```
 
 👉 employees.department\_id 는 departments.department\_id 값을 반드시 참조해야 함
+```
+(1) CONSTRAINT fk_dept
 
+제약조건에 이름(fk_dept) 을 부여하는 부분
 
+이렇게 이름을 주면 → 나중에 ALTER TABLE ... DROP CONSTRAINT fk_dept; 같은 명령으로 쉽게 관리 가능
 
+이름 규칙은 보통 fk_테이블명_컬럼명 또는 fk_컬럼명 형태로 지음
+
+여기서는 fk_dept → "부서 외래키"라는 의미
+
+(2) FOREIGN KEY (department_id)
+
+이 테이블(employees)의 department_id 컬럼이 외래키(Foreign Key) 임을 지정
+
+즉, 다른 테이블(부모 테이블)의 특정 컬럼을 참조해야 함
+
+(3) REFERENCES departments(department_id)
+
+외래키가 참조하는 부모 테이블과 컬럼을 지정
+
+departments(department_id) : departments 테이블의 department_id 컬럼이 부모 키
+
+즉, employees.department_id 값은 반드시 departments.department_id에 존재해야 함
+```
 
 #### 📌 무결성 관련 옵션 (ON DELETE / ON UPDATE)
 
