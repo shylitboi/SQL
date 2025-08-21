@@ -1942,7 +1942,7 @@ SELECT REGEXP_COUNT('123123123123123', '123', 1) AS R1,
 FROM DUAL;
 ```
 
-✅ 정답: `5, 4cr`
+✅ 정답: `5, 4`
 
 ---
 
@@ -1972,4 +1972,181 @@ $ → 문자열의 끝
 ```
 
 >## 적중 예상 문제
+
+### 6. 파티션 - 집계함수에서 order by
+: order by가 쓰인다면 디폴트는 맨 앞부터 현재까지, 윈도윙 절이 있다면 그 범위에 맞게
+* order by가 없다면 파티션 전체에 대해 집계
+### 12. 집합 연산자(UNION, UNION ALL, INTERSECT, MINUS)의 규칙
+
+컬럼 개수가 반드시 같아야 함.
+
+```
+예: SELECT a, b FROM T1 UNION SELECT x, y FROM T2 ✅
+
+SELECT a, b FROM T1 UNION SELECT x, y, z FROM T2 ❌
+```
+
+데이터 타입 호환이 되어야 함.
+
+```
+숫자 ↔ 숫자, 문자 ↔ 문자 가능
+
+숫자 ↔ 문자 같이 전혀 다른 타입 ❌
+```
+ORDER BY 는 UNION 전체 결과에 대해만 허용.
+```
+따라서 ... FROM T1 UNION ALL SELECT ... FROM T2 ORDER BY COL1 ✅
+
+하지만 중간 SELECT에 ORDER BY 넣으면 ❌
+```
+
+
+### 25. 윈도우함수 위치
+1. select 절(주로)
+2. order by
+
+```sql
+SELECT NAME, SAL
+FROM (
+        SELECT NAME, SAL
+        FROM EMP
+        ORDER BY SAL DESC
+     )
+WHERE (   ) ;
+
+```
+1. RANK <= 5
+
+    RANK()는 윈도우 함수라 SELECT 절 안에서만 쓸 수 있고,
+    WHERE 절에서 바로 못 씀 → ❌ 에러
+
+2. ROW_NUMBER <= 5
+
+    이것도 ROW_NUMBER() 윈도우 함수라 SELECT 안에서만 가능
+
+    마찬가지로 WHERE 절에서 직접 못 씀 → ❌ 에러
+
+3. ROWNUM <= 5 ✅
+
+    Oracle의 가상 컬럼 ROWNUM 은 바깥 SELECT에서 그대로 쓸 수 있음
+
+    이미 서브쿼리에서 정렬을 해놨기 때문에,
+    여기서는 ROWNUM <= 5 로 하면 상위 5명이 정확히 추출됨
+
+4. DENSE_RANK <= 5
+
+    이것도 윈도우 함수라 SELECT 안에서만 가능, WHERE 절엔 바로 못 씀 → ❌ 에러
+
+### 33. 정규표현식
+```SQL
+REGEXP_SUBSTR('ABABC','(AB)+C')
+```
+-> ABABC
+
+### 34
+
+```sql
+SELECT REGEXP_INSTR('abc123def456', '[a-z]+', 1, 2) AS R;
+```
+질문
+
+👉 왜 결과가 7이지, 2(b)가 아니냐?
+
+해설
+1. 각 인자 의미
+
+    'abc123def456' : 검색 문자열
+
+    '[a-z]+' : 정규식 패턴 → 소문자 알파벳이 1개 이상 연속된 덩어리
+
+    1 : 검색 시작 위치 (문자열 맨 처음)
+
+    2 : 두 번째 매칭을 찾으라는 의미
+
+    반환값 : 매칭된 문자열의 시작 위치
+
+2. 매칭 과정
+
+    문자열 "abc123def456"
+
+    첫 번째 매칭
+
+    [a-z]+ → "abc" (1~3 구간)
+
+    시작 위치 = 1
+
+    두 번째 매칭
+
+    "def" (7~9 구간)
+
+    시작 위치 = 7
+
+3. 중요한 포인트
+
+    **[a-z]+ 은 개별 문자가 아니라 "abc", "def" 같은 연속된 덩어리 단위로 매칭됨**
+
+    **따라서 "b"(위치2) 같은 중간 문자는 따로 매칭되지 않음**
+
+### 35
+
+좋습니다 👍 문제 35번을 하나씩 뜯어서 해설해드릴게요.
+
+---
+
+## 📌 문제 SQL
+
+```sql
+SELECT REGEXP_REPLACE('Welcome 2025!', '[[:punct:]]', '') AS RESULT
+FROM DUAL
+WHERE REGEXP_LIKE('Welcome 2025!', '^[A-Za-z]+[0-9]+$');
+```
+
+---
+
+## 1. `SELECT` 절 해석
+
+* `REGEXP_REPLACE('Welcome 2025!', '[[:punct:]]', '')`
+  → `'Welcome 2025!'` 에서 **구두점(문장 부호)** 제거
+  → `!` 가 제거됨
+  → 결과 문자열: **"Welcome 2025"**
+
+---
+
+## 2. `WHERE` 절 해석
+
+* `REGEXP_LIKE('Welcome 2025!', '^[A-Za-z]+[0-9]+$')`
+
+  * `^` : 문자열 시작
+  * `[A-Za-z]+` : 알파벳 1개 이상
+  * `[0-9]+` : 숫자 1개 이상
+  * `$` : 문자열 끝
+
+즉, 이 정규식은 **"알파벳으로 시작하고, 바로 이어서 숫자로 끝나야 한다"** 는 의미.
+
+예: `Welcome2025`, `Hello123` 는 매칭됨.
+하지만 `Welcome 2025!` 는
+
+* 알파벳 뒤에 **공백** 있음 ❌
+* 마지막에 `!` 있음 ❌
+  → 따라서 매칭 실패 → `FALSE`
+
+---
+
+## 3. 최종 결과
+
+* `WHERE` 조건이 거짓이므로
+* 아무 데이터도 출력되지 않음
+
+✅ 정답: **③ 아무 데이터도 출력되지 않는다**
+
+---
+
+## ✨ 핵심 포인트
+
+1. `[[:punct:]]` = 구두점(.,!? 등)을 의미
+   → 여기선 `!` 삭제됨.
+2. `REGEXP_LIKE` 에서 패턴이 `"^[A-Za-z]+[0-9]+$"` 라서 **공백이나 부호가 허용되지 않음**.
+3. `SELECT` 결과는 `"Welcome 2025"` 가 맞지만, `WHERE` 조건이 불일치하므로 출력 ❌.
+
+---
 
