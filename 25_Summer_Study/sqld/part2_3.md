@@ -968,3 +968,72 @@ REVOKE manager_role FROM scott;
 
 >## 적중 예상 문제
 
+### 4. TRUNCATE TABLE
+: truncate는 테이블을 삭제하는 것(= drop table)이 아닌 모든 행을 삭제, rollback 불가능
+
+### 8.
+PK는 테이블당 1개씩만 생성할 수도 있고 생성을 하지 않는 것도 가능하다
+
+### 9. ALTER(DDR)
+```ALTER TABLE 테이블명 MODIFY 컬럼 1 데이터 유형 [DEFAULT] [NOT NULL] 컬럼 2....```
+
+```ALTER TABLE 테이블명 MODIFY (컬럼 1 데이터 유형 [DEFAULT] [NOT NULL] 컬럼 2....)```
+
+
+```ALTER 테이블 테이블명 ADD  컬럼명 데이터유형``` -> 칼럼 추가
+
+
+### 13. ALTER - ADD CONSTRAINT
+```sql
+alter table sample add constraint sample_fk FOREIGN KEY(COL3) references sample1(COL1) -- sample_fk : 제약조건 이름
+```
+
+### 17 GRANT절에서 ON
+좋은 질문이에요 👍
+
+`GRANT` 절에서 **`ON`** 은 **어떤 객체에 대해 권한을 줄지**를 지정하는 역할을 합니다.
+
+---
+
+## 📌 기본 문법
+
+```sql
+GRANT 권한종류 ON 객체명 TO 사용자 [WITH GRANT OPTION];
+```
+
+* **권한종류** : SELECT, INSERT, UPDATE, DELETE, EXECUTE 등
+* **객체명** : 테이블, 뷰, 시퀀스, 프로시저 등
+* **TO 사용자** : 권한을 부여받을 사용자(또는 롤)
+* **WITH GRANT OPTION** : 받은 권한을 다른 사람에게도 부여할 수 있는 옵션
+
+---
+
+## 📌 `ON` 의 의미
+
+* 단순히 `GRANT SELECT TO user1;` 이런 식이면 **시스템 권한**을 의미 → `ON` 필요 없음.
+* 하지만 특정 테이블이나 뷰 같은 **객체 권한**을 줄 때는 `ON` 으로 그 객체를 지정해야 함.
+
+예시:
+
+```sql
+-- 테이블에 대한 권한 부여
+GRANT SELECT, INSERT
+ON employees
+TO user1;
+
+-- 프로시저 실행 권한 부여
+GRANT EXECUTE
+ON hr_pkg.calculate_bonus
+TO user2;
+```
+
+---
+
+## 📌 정리
+
+* **시스템 권한**: `ON` 필요 없음 (예: `GRANT CREATE SESSION TO user1;`)
+* **객체 권한**: `ON` 필요 (예: `GRANT SELECT ON emp TO user1;`)
+* 즉, `ON`은 "**이 객체에 대해 권한을 준다**" 라고 대상 객체를 명확히 지정하는 역할.
+
+---
+
