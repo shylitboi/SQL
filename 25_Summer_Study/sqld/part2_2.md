@@ -1647,7 +1647,7 @@ REGEXP_SUBSTR(source_string, pattern [, position [, occurrence [, match_param ]]
 | `pattern`       | 찾을 정규표현식 패턴                                                                          |
 | `position`      | 검색 시작 위치 (기본값 = 1, 즉 문자열 첫 글자부터)                                                     |
 | `occurrence`    | 몇 번째 매칭 결과를 반환할지 지정 (기본값 = 1)                                                        |
-| `match_param`   | 대소문자 구분 여부, 단일행/다중행 모드 등 옵션 (`'i'` = 대소문자 무시, `'c'` = 대소문자 구분, `'n'` = `.`이 개행 포함 등) |
+| `match_param`   | 대소문자 구분 여부, 단일행/다중행 모드 등 옵션 (`'i'` = 대소문자 무시, `'c'` = 대소문자 구분 = 디폴트, `'n'` = `.`이 개행 포함 등) |
 
 
 ```sql
